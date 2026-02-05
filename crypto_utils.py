@@ -1,12 +1,24 @@
 import os
 import base64
-import hashlib
 from cryptography.fernet import Fernet
+from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
+from cryptography.hazmat.primitives import hashes
 
-# Generate encryption key from password
+# Fixed salt for demo project (in real systems store per-user)
+SALT = b"guardlocker_salt"
+ITERATIONS = 100_000
+
+# Derive strong key from password
 def generate_key(password: str) -> bytes:
-    hashed = hashlib.sha256(password.encode()).digest()
-    return base64.urlsafe_b64encode(hashed)
+    kdf = PBKDF2HMAC(
+        algorithm=hashes.SHA256(),
+        length=32,
+        salt=SALT,
+        iterations=ITERATIONS,
+    )
+
+    key = kdf.derive(password.encode())
+    return base64.urlsafe_b64encode(key)
 
 # Encrypt file
 def encrypt_file(file_path, password):
@@ -33,3 +45,4 @@ def decrypt_file(file_path, password):
 
     with open(file_path, "wb") as file:
         file.write(decrypted_data)
+
