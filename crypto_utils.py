@@ -46,3 +46,4 @@ def decrypt_file(file_path, password):
     with open(file_path, "wb") as file:
         file.write(decrypted_data)
 
+
