@@ -1,3 +1,5 @@
+from ml.generate import generate_password
+
 
 from flask import Flask, render_template, request, redirect, session, send_file
 import os
@@ -46,8 +48,16 @@ def upload():
     file = request.files["file"]
     path = os.path.join(UPLOAD_FOLDER, file.filename)
     file.save(path)
+
     encrypt_file(path, session["password"])
+
+    decoy_password = generate_password(session["password"])
+
+    with open("vault/decoy/decoy_passwords.txt", "a") as f:
+        f.write(decoy_password + "\n")
+
     return redirect("/dashboard")
+
 
 @app.route("/download/<name>")
 def download(name):
