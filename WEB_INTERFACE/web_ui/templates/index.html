@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GuardLocker - Honey Password Vault</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <header class="header">
+            <div class="logo">
+                <span class="logo-icon">🔒</span>
+                <h1>GuardLocker</h1>
+            </div>
+            <div class="subtitle">Advanced Honey Password Vault</div>
+        </header>
+
+        <!-- Status Bar -->
+        <div class="status-bar" id="statusBar">
+            <span class="status-indicator" id="statusIndicator">●</span>
+            <span id="statusText">Not Authenticated</span>
+        </div>
+
+        <!-- Main Content Area -->
+        <div class="main-content">
+            <!-- Login/Setup Section -->
+            <div class="section" id="authSection">
+                <div class="card">
+                    <h2>🔐 Master Password</h2>
+                    <p>Enter your master password to unlock your vault or create a new one.</p>
+                    
+                    <div class="form-group">
+                        <label for="masterPassword">Master Password:</label>
+                        <div class="password-input-wrapper">
+                            <input type="password" id="masterPassword" class="input" placeholder="Enter master password">
+                            <button type="button" class="toggle-password" onclick="togglePassword('masterPassword')">👁️</button>
+                        </div>
+                    </div>
+
+                    <div class="button-group">
+                        <button class="btn btn-primary" onclick="unlockVault()">🔓 Unlock Vault</button>
+                        <button class="btn btn-secondary" onclick="createNewVault()">➕ Create New Vault</button>
+                    </div>
+
+                    <div class="password-strength" id="passwordStrength"></div>
+                </div>
+            </div>
+
+            <!-- Vault Section (Hidden until authenticated) -->
+            <div class="section hidden" id="vaultSection">
+                <!-- Add Password Card -->
+                <div class="card">
+                    <h2>➕ Add New Password</h2>
+                    
+                    <div class="form-group">
+                        <label for="website">Website:</label>
+                        <input type="text" id="website" class="input" placeholder="e.g., github.com">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="username">Username/Email:</label>
+                        <input type="text" id="username" class="input" placeholder="e.g., user@example.com">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="password">Password:</label>
+                        <div class="password-input-wrapper">
+                            <input type="password" id="password" class="input" placeholder="Enter password">
+                            <button type="button" class="toggle-password" onclick="togglePassword('password')">👁️</button>
+                        </div>
+                    </div>
+
+                    <div class="button-group">
+                        <button class="btn btn-primary" onclick="addPassword()">💾 Save Password</button>
+                        <button class="btn btn-secondary" onclick="generatePassword()">🎲 Generate Strong Password</button>
+                    </div>
+                </div>
+
+                <!-- Password List Card -->
+                <div class="card">
+                    <div class="card-header">
+                        <h2>🗂️ Your Passwords</h2>
+                        <span class="password-count" id="passwordCount">0 passwords</span>
+                    </div>
+
+                    <div class="search-bar">
+                        <input type="text" id="searchInput" class="input" placeholder="🔍 Search passwords..." onkeyup="searchPasswords()">
+                    </div>
+
+                    <div class="password-list" id="passwordList">
+                        <!-- Passwords will be dynamically added here -->
+                    </div>
+                </div>
+
+                <!-- Honey Accounts Card -->
+                <div class="card">
+                    <h2>🍯 Honey Accounts (Breach Detection)</h2>
+                    <p>These fake accounts detect if your vault has been compromised.</p>
+                    
+                    <div class="button-group">
+                        <button class="btn btn-secondary" onclick="generateHoneyAccounts()">🎯 Generate Honey Accounts</button>
+                        <button class="btn btn-secondary" onclick="showHoneyAccounts()">👁️ View Honey Accounts</button>
+                    </div>
+
+                    <div id="honeyAccountsList" class="honey-accounts-list hidden"></div>
+                </div>
+
+                <!-- Security Info Card -->
+                <div class="card security-info">
+                    <h2>🛡️ Security Status</h2>
+                    <div class="security-stats">
+                        <div class="stat-item">
+                            <div class="stat-label">Encryption</div>
+                            <div class="stat-value">AES-256-GCM</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-label">Model</div>
+                            <div class="stat-value">Transformer (85M params)</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-label">Honey Encryption</div>
+                            <div class="stat-value">✅ Active</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Actions -->
+                <div class="card">
+                    <h2>⚙️ Vault Actions</h2>
+                    <div class="button-group">
+                        <button class="btn btn-secondary" onclick="exportVault()">📤 Export Vault</button>
+                        <button class="btn btn-secondary" onclick="importVault()">📥 Import Vault</button>
+                        <button class="btn btn-danger" onclick="lockVault()">🔒 Lock Vault</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <footer class="footer">
+            <p>GuardLocker v1.0 | Based on USENIX Security 2025 Research | 
+                <a href="#" onclick="showAbout()">About</a> | 
+                <a href="#" onclick="showDocumentation()">Documentation</a>
+            </p>
+        </footer>
+    </div>
+
+    <!-- Modal for showing passwords -->
+    <div id="passwordModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeModal()">&times;</span>
+            <h2 id="modalTitle">Password Details</h2>
+            <div id="modalBody"></div>
+        </div>
+    </div>
+
+    <!-- Toast Notifications -->
+    <div id="toast" class="toast"></div>
+
+    <script src="/static/app.js"></script>
+</body>
+</html>
