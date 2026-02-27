@@ -115,45 +115,55 @@ class HoneyEncoder:
         max_total_length: int = 1000
     ) -> List[str]:
         """
-        Decode a seed to a vault
-        
-        Process:
-        1. Convert seed to integer
-        2. For each position, extract probability interval from seed bits
-        3. Sample character from interval using model
-        4. Continue until separator or length limit
-        
+        Decode a seed to a vault.
+
+        FIX BUG 7: The original decoder consumed bits from the LSB (seed >> bits)
+        while the encoder packed them MSB-first ((seed << bits) | chunk).
+        This caused decoded characters to come out in REVERSE order, so
+        encode_vault(["abc"]) -> decode_seed() returned ["cba"].
+
+        Fix: decode now consumes bits from the MSB side by tracking the total
+        number of bits remaining, extracting the top `bits` each step, and
+        shifting the remaining bits up to realign.
+
         Args:
-            seed: Seed bytes
+            seed: Seed bytes produced by encode_vault()
             max_passwords: Maximum number of passwords to decode
             max_total_length: Maximum total length to prevent infinite loops
-        
+
         Returns:
             List of decoded passwords
         """
-        # Convert seed to integer
         seed_value = int.from_bytes(seed, byteorder='big')
-        
+        total_bits = len(seed) * 8
+
         passwords = []
         context = '<SEP>'
         current_password = ''
         chars_decoded = 0
-        
+
         while len(passwords) < max_passwords and chars_decoded < max_total_length:
-            # Get probability distribution
+            if total_bits <= 0:
+                break
+
             probs = self._get_char_probabilities(context)
-            
-            # Extract character from seed using inverse sampling
-            char_id, bits_consumed = self._seed_to_character(
-                seed_value, probs
+
+            # FIX: extract from the MSB side to match encode packing order
+            char_id, bits_consumed = self._seed_to_character_msb(
+                seed_value, total_bits, probs
             )
-            
-            # Consume bits from seed
-            seed_value = seed_value >> bits_consumed
-            
-            # Decode character
+
+            # Consume bits from the top (MSB side)
+            total_bits -= bits_consumed
+            # Mask off the consumed top bits
+            if total_bits >= 0:
+                seed_value = seed_value & ((1 << total_bits) - 1)
+            else:
+                seed_value = 0
+                total_bits = 0
+
             char = self.tokenizer.id_to_char(char_id)
-            
+
             if char == '<SEP>':
                 if current_password:
                     passwords.append(current_password)
@@ -162,21 +172,18 @@ class HoneyEncoder:
             else:
                 current_password += char
                 context += char
-            
+
             chars_decoded += 1
-            
-            # Safety check for password length
+
             if len(current_password) > 25:
-                # Force separator
                 if current_password:
                     passwords.append(current_password)
                     current_password = ''
                 context += '<SEP>'
-        
-        # Add any remaining password
+
         if current_password:
             passwords.append(current_password)
-        
+
         return passwords
     
     def _get_char_probabilities(self, context: str) -> torch.Tensor:
@@ -259,54 +266,81 @@ class HoneyEncoder:
         probs: torch.Tensor
     ) -> Tuple[int, int]:
         """
-        Extract character from seed using inverse sampling
-        
-        Args:
-            seed_value: Current seed value
-            probs: Probability distribution
-        
-        Returns:
-            (character_id, bits_consumed)
+        Extract character from seed using inverse sampling (LSB-first).
+        Kept for backwards compatibility — decode_seed now uses
+        _seed_to_character_msb() instead.
         """
-        # Convert to numpy
         probs_np = probs.cpu().numpy()
         cumsum = np.cumsum(probs_np)
-        
-        # Estimate bits needed for this position
         max_bits = 32
-        
-        # Try different bit widths to find best match
+
         for bits in range(1, max_bits + 1):
             seed_space = 2 ** bits
-            # Extract bits from seed
             extracted_bits = seed_value & ((1 << bits) - 1)
-            
-            # Convert to probability value [0, 1]
             prob_value = extracted_bits / seed_space
-            
-            # Find character with this cumulative probability
             char_id = np.searchsorted(cumsum, prob_value, side='right')
-            
-            # Verify this is a valid encoding
             if char_id < len(probs_np):
-                interval_start, interval_end = self._get_cumulative_interval(
-                    char_id, probs
-                )
-                
-                # Check if our extracted value falls in this interval
+                interval_start, interval_end = self._get_cumulative_interval(char_id, probs)
                 seed_start = int(interval_start * seed_space)
-                seed_end = int(interval_end * seed_space)
-                
+                seed_end   = int(interval_end   * seed_space)
                 if seed_start <= extracted_bits < seed_end:
                     return int(char_id), bits
-        
-        # Fallback: use maximum bits and best guess
+
         seed_space = 2 ** max_bits
         extracted_bits = seed_value & ((1 << max_bits) - 1)
         prob_value = extracted_bits / seed_space
         char_id = np.searchsorted(cumsum, prob_value, side='right')
-        
         return int(min(char_id, len(probs_np) - 1)), max_bits
+
+    def _seed_to_character_msb(
+        self,
+        seed_value: int,
+        total_bits: int,
+        probs: torch.Tensor
+    ) -> Tuple[int, int]:
+        """
+        FIX BUG 7: Extract character from seed consuming MSB-first.
+
+        The encoder packs chunks MSB-first: seed = (seed << bits) | chunk.
+        So to decode correctly we must read the TOP `bits` of the remaining
+        seed integer, not the bottom bits.
+
+        Args:
+            seed_value:  Current seed integer (already masked to total_bits wide)
+            total_bits:  Number of valid bits remaining in seed_value
+            probs:       Probability distribution over vocabulary
+
+        Returns:
+            (character_id, bits_consumed)
+        """
+        probs_np = probs.cpu().numpy()
+        cumsum = np.cumsum(probs_np)
+        max_bits = min(32, total_bits) if total_bits > 0 else 1
+
+        for bits in range(1, max_bits + 1):
+            seed_space = 2 ** bits
+            # Extract the TOP `bits` from seed_value
+            shift = total_bits - bits
+            extracted_bits = (seed_value >> shift) & ((1 << bits) - 1)
+
+            prob_value = extracted_bits / seed_space
+            char_id = np.searchsorted(cumsum, prob_value, side='right')
+
+            if char_id < len(probs_np):
+                interval_start, interval_end = self._get_cumulative_interval(char_id, probs)
+                seed_start = int(interval_start * seed_space)
+                seed_end   = int(interval_end   * seed_space)
+                if seed_start <= extracted_bits < seed_end:
+                    return int(char_id), bits
+
+        # Fallback
+        bits = max_bits
+        seed_space = 2 ** bits
+        shift = total_bits - bits
+        extracted_bits = (seed_value >> shift) & ((1 << bits) - 1)
+        prob_value = extracted_bits / seed_space
+        char_id = np.searchsorted(cumsum, prob_value, side='right')
+        return int(min(char_id, len(probs_np) - 1)), bits
     
     def encode_incremental(
         self,

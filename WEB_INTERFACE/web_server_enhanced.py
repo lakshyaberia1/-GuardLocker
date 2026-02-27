@@ -1,4 +1,3 @@
-
 #!/usr/bin/env python3
 """
 GuardLocker Web Server - ENHANCED VERSION
@@ -6,6 +5,7 @@ GuardLocker Web Server - ENHANCED VERSION
 ✓ Bulk data generation (2M+ passwords)
 ✓ Fixed decoy vault
 ✓ Better authentication
+✓ Argon2id password hashing (v2 — memory-hard, GPU-resistant)
 """
 
 from flask import Flask, render_template, request, jsonify, send_from_directory, session
@@ -40,8 +40,8 @@ app.secret_key = secrets.token_hex(32)
 
 # ============ TELEGRAM CONFIGURATION ============
 # Set these environment variables or edit here:
-TELEGRAM_BOT_TOKEN = '8511379034:AAEH4QNCBQWBXjm5uytYf5-jDAXmHvpk3jg'# os.getenv('TELEGRAM_BOT_TOKEN', '')  # remove added telegram bot then get your token from here  @BotFather
-TELEGRAM_CHAT_ID = '5590835443' #os.getenv('TELEGRAM_CHAT_ID', '')     # # remove added telegram bot then get Your chat ID
+TELEGRAM_BOT_TOKEN =os.getenv('TELEGRAM_BOT_TOKEN', '') ##8511379034:AAEH4QNCBQWBXjm5uytYf5-jDAXmHvpk3jg # remove added telegram bot then get your token from here  @BotFather
+TELEGRAM_CHAT_ID = os.getenv('TELEGRAM_CHAT_ID', '')#'5590835443' #     # # remove added telegram bot then get Your chat ID
 
 def send_telegram_alert(message: str, is_critical: bool = True):
     """
@@ -97,9 +97,51 @@ vault_data = {
 # ============ BULK GENERATION CACHE ============
 bulk_generated_passwords = []  # Store 2M+ passwords here
 
+
+# ── Argon2id for master password verification ────────────────
+# Uses argon2-cffi for memory-hard hashing.
+# Falls back to SHA-256 if not installed (run: pip install argon2-cffi)
+try:
+    from argon2 import PasswordHasher
+    from argon2.exceptions import VerifyMismatchError, VerificationError
+    _ph = PasswordHasher(
+        time_cost    = 3,       # iterations
+        memory_cost  = 65536,   # 64 MB
+        parallelism  = 4,       # threads
+        hash_len     = 32,
+        salt_len     = 32,
+    )
+    ARGON2_WEB_AVAILABLE = True
+    print("✓ Argon2id loaded for web server password verification")
+except ImportError:
+    ARGON2_WEB_AVAILABLE = False
+    print("⚠️  argon2-cffi not found. Run: pip install argon2-cffi")
+    print("    Falling back to SHA-256 for verification (temporary).")
+
+
 def hash_password(password: str) -> str:
-    """SHA256 hash for password verification"""
+    """
+    Hash master password for verification storage.
+    Uses Argon2id when available (memory-hard, GPU-resistant).
+    Falls back to SHA-256 if argon2-cffi not installed.
+    """
+    if ARGON2_WEB_AVAILABLE:
+        return _ph.hash(password)
     return hashlib.sha256(password.encode('utf-8')).hexdigest()
+
+
+def verify_password(stored_hash: str, provided_password: str) -> bool:
+    """
+    Verify provided password against stored hash.
+    Handles both Argon2id hashes and SHA-256 fallback hashes.
+    """
+    if ARGON2_WEB_AVAILABLE and stored_hash.startswith('$argon2'):
+        try:
+            return _ph.verify(stored_hash, provided_password)
+        except (VerifyMismatchError, VerificationError, Exception):
+            return False
+    # SHA-256 fallback comparison
+    return hashlib.sha256(provided_password.encode('utf-8')).hexdigest() == stored_hash
 
 def init_vault_system():
     """Initialize the vault system"""
@@ -113,40 +155,97 @@ def init_vault_system():
             print("Running in demo mode")
 
 def generate_demo_decoy_passwords(count: int = 5):
-    """Generate fake but realistic-looking passwords for demo decoy mode"""
-    import random
-    import string
-    
+    """
+    Generate realistic decoy passwords for demo/fallback mode.
+
+    FIXED — two problems corrected vs. old implementation:
+
+    Problem 1 — American names were an instant tell:
+        Old: john_doe, sarah_m, alex_t, mike_j, emma_w
+        New: Indian first names + surnames (rahul, priya, sharma, patel...)
+             matching the actual NIELIT/Indian user base.
+
+    Problem 2 — Different username per site was obviously fake:
+        Old: random username from pool for every site
+        New: ONE consistent identity per vault, weighted by real behavior:
+               primary_email  →  rahulsharma99@gmail.com  (80% of sites)
+               dob_handle     →  rahul1999                 (15% of sites)
+               phone_handle   →  rahul_7342                (5% of sites)
+             Real users reuse one email everywhere — this was the biggest
+             tell that the old decoy was fake.
+    """
+    import random, string
+
+    FIRST_NAMES = [
+        'rahul', 'priya', 'amit', 'neha', 'rohan', 'pooja',
+        'vikram', 'anjali', 'arjun', 'divya', 'karan', 'simran',
+        'ravi', 'sneha', 'aditya', 'meera', 'sanjay', 'kavya',
+        'nikhil', 'shruti', 'deepak', 'ananya', 'suresh', 'ishaan',
+        'ritika', 'gaurav', 'swati', 'mohit', 'tanvi', 'varun',
+    ]
+    LAST_PARTS = [
+        'sharma', 'verma', 'singh', 'kumar', 'gupta', 'joshi',
+        'patel', 'yadav', 'mehta', 'nair', 'mishra', 'dubey',
+        'pandey', 'chauhan', 'iyer', 'reddy',
+    ]
+    EMAIL_PROVIDERS = ['1213', '1234', '65656.com', '9090']
+    SITES = [
+        'gmail.com',     'facebook.com',  'amazon.in',   'netflix.com',
+        'instagram.com', 'twitter.com',   'linkedin.com','github.com',
+        'flipkart.com',  'paytm.com',     'hotstar.com', 'youtube.com',
+        'swiggy.com',    'zomato.com',    'phonepe.com', 'naukri.com',
+    ]
+    COMMON_WORDS = [
+        'password', 'india123', 'welcome', 'qwerty', 'admin',
+        'iloveyou', 'hello',   'master',  'dragon', 'bharat',
+        'namaste',  'cricket', 'sachin',  'bollywood',
+    ]
+
+    # Build ONE consistent identity for this vault
+    first  = random.choice(FIRST_NAMES)
+    last   = random.choice(LAST_PARTS)
+    year   = random.randint(1995, 2005)
+    suffix = random.randint(1000, 9999)
+    prov   = random.choice(EMAIL_PROVIDERS)
+    sep    = random.choice(['', '.', '_'])
+    eu     = f"{first}{sep}{last}"
+    if random.random() < 0.4:
+        eu += str(year)[-2:]
+
+    primary_email = f"{eu}{prov}"      # rahulsharma99@gmail.com
+    dob_handle    = f"{first}{year}"    # rahul1999
+    phone_handle  = f"{first}_{suffix}" # rahul_7342
+
+    def pick_username():
+        r = random.random()
+        if r < 0.80:   return primary_email
+        elif r < 0.95: return dob_handle
+        else:          return phone_handle
+
+    # 5 real-world Indian password patterns; one dominant per person
+    patterns = [
+        lambda: ''.join(random.choices(string.ascii_lowercase, k=random.randint(6, 8))),
+        lambda: ''.join(random.choices(string.ascii_lowercase, k=4)) + str(random.randint(10, 9999)),
+        lambda: random.choice(COMMON_WORDS) + str(random.randint(1, 999)),
+        lambda: ''.join(random.choices(string.ascii_letters + string.digits, k=random.randint(8, 12))),
+        lambda: first + str(random.randint(1990, 2010)),  # rahul2001 — very common in India
+    ]
+    dominant = random.choice(patterns)
+
+    available_sites = random.sample(SITES, min(count, len(SITES)))
     decoy_passwords = []
-    demo_sites = [
-        'github.com', 'gmail.com', 'dropbox.com', 'linkedin.com', 
-        'twitter.com', 'facebook.com', 'netflix.com', 'spotify.com',
-        'amazon.com', 'reddit.com'
-    ]
-    
-    usernames = [
-        'john_doe', 'sarah_m', 'alex_tech', 'demo_user', 'test_account',
-        'user_2024', 'secure_user', 'my_account', 'webuser', 'profile_1'
-    ]
-    
     for i in range(count):
-        patterns = [
-            lambda: ''.join(random.choices(string.ascii_letters, k=8)) + ''.join(random.choices(string.digits, k=3)) + '!',
-            lambda: 'Password' + str(random.randint(100, 999)) + random.choice(['!', '@', '#']),
-            lambda: random.choice(['Secure', 'Safe', 'Private']) + str(random.randint(2020, 2025)),
-            lambda: ''.join(random.choices(string.ascii_uppercase, k=1)) + ''.join(random.choices(string.ascii_lowercase, k=6)) + str(random.randint(10, 99)),
-        ]
-        
+        site  = available_sites[i % len(available_sites)]
+        uname = pick_username()
+        # 70% dominant pattern, 30% variation — real human behavior
+        pwd   = dominant() if random.random() < 0.70 else random.choice(patterns)()
         decoy_passwords.append({
-            'website': demo_sites[i % len(demo_sites)],
-            'username': usernames[i % len(usernames)],
-            'password': random.choice(patterns)(),
-            'is_decoy': True
+            'website':  site,
+            'username': uname,
+            'password': pwd,
         })
-    
     return decoy_passwords
 
-# ============ API ROUTES ============
 
 @app.route('/')
 def index():
@@ -233,8 +332,9 @@ def unlock_vault():
             return jsonify({'error': 'No vault created yet. Please create a vault first.'}), 400
         
         # Verify password
-        provided_password_hash = hash_password(master_password)
-        is_correct_password = (provided_password_hash == vault_data['master_password_hash'])
+        is_correct_password = verify_password(
+            vault_data['master_password_hash'], master_password
+        )
         
         # Update last attempt time
         vault_data['last_attempt_time'] = datetime.now().isoformat()
@@ -385,8 +485,7 @@ def add_password():
             return jsonify({'error': 'All fields required'}), 400
         
         # Verify master password
-        provided_password_hash = hash_password(master_password)
-        if provided_password_hash != vault_data['master_password_hash']:
+        if not verify_password(vault_data['master_password_hash'], master_password):
             return jsonify({'error': 'Invalid master password'}), 401
         
         new_entry = {

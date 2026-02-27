@@ -1,163 +1,320 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="dark">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>GuardLocker - Honey Password Vault</title>
+    <title>GuardLocker v2 — Honey Password Vault</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
-    <div class="container">
-        <!-- Header -->
-        <header class="header">
-            <div class="logo">
-                <span class="logo-icon">🔒</span>
-                <h1>GuardLocker</h1>
+    <div class="bg-texture"></div>
+    <div class="bg-grid"></div>
+    <div class="bg-glow"></div>
+
+    <!-- ══ HEADER ══ -->
+    <header class="header">
+        <div class="header-brand">
+            <div class="brand-lock">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" width="18" height="18">
+                    <rect x="3" y="11" width="18" height="11" rx="2.5"/>
+                    <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+                    <circle cx="12" cy="16.5" r="1" fill="currentColor" stroke="none"/>
+                </svg>
             </div>
-            <div class="subtitle">Advanced Honey Password Vault</div>
-        </header>
-
-        <!-- Status Bar -->
-        <div class="status-bar" id="statusBar">
-            <span class="status-indicator" id="statusIndicator">●</span>
-            <span id="statusText">Not Authenticated</span>
-        </div>
-
-        <!-- Main Content Area -->
-        <div class="main-content">
-            <!-- Login/Setup Section -->
-            <div class="section" id="authSection">
-                <div class="card">
-                    <h2>🔐 Master Password</h2>
-                    <p>Enter your master password to unlock your vault or create a new one.</p>
-                    
-                    <div class="form-group">
-                        <label for="masterPassword">Master Password:</label>
-                        <div class="password-input-wrapper">
-                            <input type="password" id="masterPassword" class="input" placeholder="Enter master password">
-                            <button type="button" class="toggle-password" onclick="togglePassword('masterPassword')">👁️</button>
-                        </div>
-                    </div>
-
-                    <div class="button-group">
-                        <button class="btn btn-primary" onclick="unlockVault()">🔓 Unlock Vault</button>
-                        <button class="btn btn-secondary" onclick="createNewVault()">➕ Create New Vault</button>
-                    </div>
-
-                    <div class="password-strength" id="passwordStrength"></div>
-                </div>
-            </div>
-
-            <!-- Vault Section (Hidden until authenticated) -->
-            <div class="section hidden" id="vaultSection">
-                <!-- Add Password Card -->
-                <div class="card">
-                    <h2>➕ Add New Password</h2>
-                    
-                    <div class="form-group">
-                        <label for="website">Website:</label>
-                        <input type="text" id="website" class="input" placeholder="e.g., github.com">
-                    </div>
-
-                    <div class="form-group">
-                        <label for="username">Username/Email:</label>
-                        <input type="text" id="username" class="input" placeholder="e.g., user@example.com">
-                    </div>
-
-                    <div class="form-group">
-                        <label for="password">Password:</label>
-                        <div class="password-input-wrapper">
-                            <input type="password" id="password" class="input" placeholder="Enter password">
-                            <button type="button" class="toggle-password" onclick="togglePassword('password')">👁️</button>
-                        </div>
-                    </div>
-
-                    <div class="button-group">
-                        <button class="btn btn-primary" onclick="addPassword()">💾 Save Password</button>
-                        <button class="btn btn-secondary" onclick="generatePassword()">🎲 Generate Strong Password</button>
-                    </div>
-                </div>
-
-                <!-- Password List Card -->
-                <div class="card">
-                    <div class="card-header">
-                        <h2>🗂️ Your Passwords</h2>
-                        <span class="password-count" id="passwordCount">0 passwords</span>
-                    </div>
-
-                    <div class="search-bar">
-                        <input type="text" id="searchInput" class="input" placeholder="🔍 Search passwords..." onkeyup="searchPasswords()">
-                    </div>
-
-                    <div class="password-list" id="passwordList">
-                        <!-- Passwords will be dynamically added here -->
-                    </div>
-                </div>
-
-                <!-- Honey Accounts Card -->
-                <div class="card">
-                    <h2>🍯 Honey Accounts (Breach Detection)</h2>
-                    <p>These fake accounts detect if your vault has been compromised.</p>
-                    
-                    <div class="button-group">
-                        <button class="btn btn-secondary" onclick="generateHoneyAccounts()">🎯 Generate Honey Accounts</button>
-                        <button class="btn btn-secondary" onclick="showHoneyAccounts()">👁️ View Honey Accounts</button>
-                    </div>
-
-                    <div id="honeyAccountsList" class="honey-accounts-list hidden"></div>
-                </div>
-
-                <!-- Security Info Card -->
-                <div class="card security-info">
-                    <h2>🛡️ Security Status</h2>
-                    <div class="security-stats">
-                        <div class="stat-item">
-                            <div class="stat-label">Encryption</div>
-                            <div class="stat-value">AES-256-GCM</div>
-                        </div>
-                        <div class="stat-item">
-                            <div class="stat-label">Model</div>
-                            <div class="stat-value">Transformer (85M params)</div>
-                        </div>
-                        <div class="stat-item">
-                            <div class="stat-label">Honey Encryption</div>
-                            <div class="stat-value">✅ Active</div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Actions -->
-                <div class="card">
-                    <h2>⚙️ Vault Actions</h2>
-                    <div class="button-group">
-                        <button class="btn btn-secondary" onclick="exportVault()">📤 Export Vault</button>
-                        <button class="btn btn-secondary" onclick="importVault()">📥 Import Vault</button>
-                        <button class="btn btn-danger" onclick="lockVault()">🔒 Lock Vault</button>
-                    </div>
-                </div>
+            <div>
+                <div class="brand-name">GuardLocker</div>
+                <div class="brand-sub">v2.0 · Argon2id · AES-256-GCM · Honey Encryption</div>
             </div>
         </div>
+        <div class="header-right">
+            <div class="header-chips">
+                <span class="chip chip-green" title="Authenticated encryption, 96-bit nonce">AES-256-GCM</span>
+                <span class="chip chip-blue" title="Memory-hard KDF, 64MB per attempt">Argon2id 64MB</span>
+                <span class="chip chip-amber" id="telegramChip">Telegram ○</span>
+            </div>
+            <!-- THEME TOGGLE -->
+            <button class="theme-btn" id="themeBtn" onclick="toggleTheme()" title="Switch theme">
+                <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="15" height="15">
+                    <circle cx="12" cy="12" r="5"/>
+                    <line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/>
+                    <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/>
+                    <line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/>
+                    <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
+                </svg>
+                <svg class="icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="15" height="15">
+                    <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+                </svg>
+            </button>
+        </div>
+    </header>
 
-        <!-- Footer -->
-        <footer class="footer">
-            <p>GuardLocker v1.0 | Based on USENIX Security 2025 Research | 
-                <a href="#" onclick="showAbout()">About</a> | 
-                <a href="#" onclick="showDocumentation()">Documentation</a>
-            </p>
-        </footer>
+    <!-- ══ STATUS BAR ══ -->
+    <div class="statusbar">
+        <div class="statusbar-left">
+            <span class="status-dot" id="statusDot" data-state="locked"></span>
+            <span class="status-label" id="statusText">Vault Locked</span>
+        </div>
+        <div class="statusbar-right">
+            <span class="status-meta" id="statusMeta">No vault loaded</span>
+        </div>
     </div>
 
-    <!-- Modal for showing passwords -->
-    <div id="passwordModal" class="modal">
-        <div class="modal-content">
-            <span class="close" onclick="closeModal()">&times;</span>
-            <h2 id="modalTitle">Password Details</h2>
+    <main class="container">
+
+        <!-- ══ AUTH SCREEN ══ -->
+        <section id="authSection">
+            <div class="auth-grid">
+
+                <!-- Login card -->
+                <div class="card card-accent">
+                    <div class="card-eyebrow">Master Password</div>
+                    <h2 class="card-heading">Unlock Your Vault</h2>
+                    <p class="card-desc">Enter your master password. A wrong password silently returns a convincing decoy vault — the attacker never learns they failed.</p>
+
+                    <div class="field">
+                        <label class="field-lbl">Password</label>
+                        <div class="field-wrap">
+                            <input type="password" id="masterPassword" class="inp"
+                                   placeholder="Minimum 12 characters" autocomplete="off"
+                                   onkeydown="if(event.key==='Enter')unlockVault()">
+                            <button class="eye-btn" onclick="togglePassword('masterPassword')">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14">
+                                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>
+                                </svg>
+                            </button>
+                        </div>
+                        <div class="strength-rail"><div class="strength-bar" id="strengthBar"></div></div>
+                        <div class="strength-hint" id="strengthHint"></div>
+                    </div>
+
+                    <div class="btn-row">
+                        <button class="btn btn-primary" onclick="unlockVault()">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" width="13" height="13">
+                                <rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 9.9-1"/>
+                            </svg>
+                            Unlock Vault
+                        </button>
+                        <button class="btn btn-ghost" onclick="createNewVault()">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" width="13" height="13">
+                                <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+                            </svg>
+                            New Vault
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Architecture card -->
+                <div class="card">
+                    <div class="card-eyebrow">Security Architecture</div>
+                    <h2 class="card-heading">How It Works</h2>
+                    <div class="arch-stack">
+                        <div class="arch-row">
+                            <div class="arch-icon a-green">🛡</div>
+                            <div>
+                                <div class="arch-title">AES-256-GCM Encryption</div>
+                                <div class="arch-desc">Authenticated encryption · 96-bit nonce · tamper-proof ciphertext</div>
+                            </div>
+                        </div>
+                        <div class="arch-row">
+                            <div class="arch-icon a-blue">🔑</div>
+                            <div>
+                                <div class="arch-title">Argon2id Key Derivation</div>
+                                <div class="arch-desc">t=3, m=64MB, p=4 · PHC winner · OWASP 2024 recommended</div>
+                            </div>
+                        </div>
+                        <div class="arch-row">
+                            <div class="arch-icon a-amber">🍯</div>
+                            <div>
+                                <div class="arch-title">Indian-Identity Decoy Generator</div>
+                                <div class="arch-desc">One consistent identity per vault · 52.50% classifier accuracy</div>
+                            </div>
+                        </div>
+                        <div class="arch-row">
+                            <div class="arch-icon a-red">📡</div>
+                            <div>
+                                <div class="arch-title">Real-Time Telegram Alerts</div>
+                                <div class="arch-desc">Instant push notification on every wrong-password attempt</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </section>
+
+        <!-- ══ VAULT SCREEN ══ -->
+        <section id="vaultSection" class="hidden">
+
+            <div class="vault-bar">
+                <div class="vault-bar-left">
+                    <span class="vault-badge" id="vaultTypeBadge">● Vault Active</span>
+                    <span class="vault-count" id="passwordCount">0 passwords</span>
+                </div>
+                <div class="vault-bar-right">
+                    <button class="btn btn-sm btn-ghost" onclick="generateHoneyAccounts()">🍯 Honey</button>
+                    <button class="btn btn-sm btn-ghost" onclick="testTelegram()">📡 Telegram</button>
+                    <button class="btn btn-sm btn-ghost" onclick="exportVault()">↑ Export</button>
+                    <button class="btn btn-sm btn-ghost" onclick="importVault()">↓ Import</button>
+                    <button class="btn btn-sm btn-danger" onclick="lockVault()">🔒 Lock</button>
+                </div>
+            </div>
+
+            <div class="vault-grid">
+
+                <!-- Add password -->
+                <div class="card">
+                    <div class="card-eyebrow">New Entry</div>
+                    <h3 class="card-heading-sm">Add Password</h3>
+                    <div class="field">
+                        <label class="field-lbl">Website</label>
+                        <input type="text" id="website" class="inp" placeholder="github.com">
+                    </div>
+                    <div class="field">
+                        <label class="field-lbl">Username</label>
+                        <input type="text" id="username" class="inp" placeholder="rahul_sharma">
+                    </div>
+                    <div class="field">
+                        <label class="field-lbl">Password</label>
+                        <div class="field-wrap">
+                            <input type="password" id="password" class="inp" placeholder="Enter or generate">
+                            <button class="eye-btn" onclick="togglePassword('password')">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14">
+                                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="btn-row">
+                        <button class="btn btn-primary btn-sm" onclick="addPassword()">💾 Save</button>
+                        <button class="btn btn-ghost btn-sm" onclick="generatePassword()">🎲 Generate</button>
+                    </div>
+                </div>
+
+                <!-- Password list -->
+                <div class="card card-span2">
+                    <div class="card-top-row">
+                        <div>
+                            <div class="card-eyebrow">Credentials</div>
+                            <h3 class="card-heading-sm">Your Passwords</h3>
+                        </div>
+                        <input type="text" id="searchInput" class="inp inp-sm" placeholder="🔍 Search…" onkeyup="searchPasswords()">
+                    </div>
+                    <div class="pwd-list" id="passwordList">
+                        <div class="empty-state">
+                            <div class="empty-icon">🗝</div>
+                            <p>No passwords yet. Add your first entry above.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Honey accounts -->
+                <div class="card">
+                    <div class="card-eyebrow">Breach Detection</div>
+                    <h3 class="card-heading-sm">🍯 Honey Accounts</h3>
+                    <p class="card-desc">Fake trap credentials inside your vault. Any login attempt triggers an instant Telegram alert — definitive proof of compromise.</p>
+                    <div class="btn-row">
+                        <button class="btn btn-ghost btn-sm" onclick="generateHoneyAccounts()">Generate</button>
+                        <button class="btn btn-ghost btn-sm" onclick="showHoneyAccounts()">View</button>
+                    </div>
+                    <div id="honeyAccountsList" class="honey-list hidden"></div>
+                </div>
+
+                <!-- Security dashboard -->
+                <div class="card card-full">
+                    <div class="card-eyebrow">Live System Status</div>
+                    <h3 class="card-heading-sm">🛡 Security Dashboard</h3>
+                    <div class="stat-grid">
+                        <div class="stat-box">
+                            <div class="stat-lbl">Encryption</div>
+                            <div class="stat-val v-green">AES-256-GCM</div>
+                        </div>
+                        <div class="stat-box">
+                            <div class="stat-lbl">Key Derivation</div>
+                            <div class="stat-val v-blue">Argon2id</div>
+                        </div>
+                        <div class="stat-box">
+                            <div class="stat-lbl">Memory Cost</div>
+                            <div class="stat-val v-blue">64 MB / attempt</div>
+                        </div>
+                        <div class="stat-box">
+                            <div class="stat-lbl">KDF Parameters</div>
+                            <div class="stat-val">t=3 · m=65536 · p=4</div>
+                        </div>
+                        <div class="stat-box">
+                            <div class="stat-lbl">Honey Encryption</div>
+                            <div class="stat-val v-green">Active</div>
+                        </div>
+                        <div class="stat-box">
+                            <div class="stat-lbl">Decoy Generator</div>
+                            <div class="stat-val v-amber">Indian Identity v2</div>
+                        </div>
+                        <div class="stat-box">
+                            <div class="stat-lbl">Classifier Accuracy</div>
+                            <div class="stat-val v-amber">52.50% ≈ random</div>
+                        </div>
+                        <div class="stat-box">
+                            <div class="stat-lbl">Telegram Alerts</div>
+                            <div class="stat-val" id="telegramStatusVal">Checking…</div>
+                        </div>
+                        <div class="stat-box">
+                            <div class="stat-lbl">Nonce</div>
+                            <div class="stat-val">96-bit (GCM)</div>
+                        </div>
+                        <div class="stat-box">
+                            <div class="stat-lbl">Salt</div>
+                            <div class="stat-val">256-bit</div>
+                        </div>
+                        <div class="stat-box">
+                            <div class="stat-lbl">Vault Version</div>
+                            <div class="stat-val">2.0</div>
+                        </div>
+                        <div class="stat-box">
+                            <div class="stat-lbl">Foundation</div>
+                            <div class="stat-val">Juels & Ristenpart 2014</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Bulk generation -->
+                <div class="card">
+                    <div class="card-eyebrow">Research Tool</div>
+                    <h3 class="card-heading-sm">📊 Bulk Generation</h3>
+                    <p class="card-desc">Generate large password datasets for classifier benchmarking experiments.</p>
+                    <div class="field">
+                        <label class="field-lbl">Count</label>
+                        <input type="number" id="bulkCount" class="inp" value="10000" min="100" max="2500000">
+                    </div>
+                    <button class="btn btn-ghost btn-sm" onclick="bulkGenerate()">Generate Dataset</button>
+                    <div id="bulkResult" class="bulk-result hidden"></div>
+                </div>
+
+            </div>
+        </section>
+
+    </main>
+
+    <!-- FOOTER -->
+    <footer class="footer">
+        <span class="footer-name">GuardLocker v2.0</span>
+        <span class="footer-dot">·</span>
+        <span>Argon2id + AES-256-GCM + Honey Encryption · NIELIT India</span>
+        <span class="footer-dot">·</span>
+        <a href="#" class="footer-link" onclick="showAbout();return false">About</a>
+    </footer>
+
+    <!-- MODAL -->
+    <div id="modal" class="modal-overlay hidden" onclick="closeModal()">
+        <div class="modal-box" onclick="event.stopPropagation()">
+            <button class="modal-close" onclick="closeModal()">✕</button>
+            <h2 class="modal-title" id="modalTitle"></h2>
             <div id="modalBody"></div>
         </div>
     </div>
 
-    <!-- Toast Notifications -->
-    <div id="toast" class="toast"></div>
+    <!-- TOAST -->
+    <div id="toast" class="toast hidden"></div>
 
     <script src="/static/app.js"></script>
 </body>

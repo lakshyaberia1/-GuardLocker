@@ -1,0 +1,456 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GuardLocker Poster</title>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@700;900&family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #f0f4f8;
+    --panel: #ffffff;
+    --border: #c5d8ec;
+    --accent: #0066cc;
+    --accent2: #d94f00;
+    --accent3: #1a8a1a;
+    --text: #1a2a3a;
+    --muted: #4a6070;
+    --light: #e8f0f8;
+    --light2: #fff3ee;
+    --light3: #edfaed;
+  }
+
+  html, body {
+    width: 100%; height: 100%;
+    background: #d8e4f0;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-family: 'Inter', sans-serif;
+  }
+
+  .poster {
+    width: 1280px;
+    height: 720px;
+    background: var(--bg);
+    border: 2px solid var(--border);
+    box-shadow: 0 8px 40px rgba(0,60,120,0.18);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    position: relative;
+  }
+
+  /* HEADER */
+  .header {
+    background: linear-gradient(135deg, #003d7a 0%, #0055aa 60%, #0066cc 100%);
+    padding: 10px 20px 9px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-shrink: 0;
+  }
+
+  .header-left { display: flex; align-items: center; gap: 12px; }
+
+  .lock-icon {
+    width: 42px; height: 42px;
+    background: rgba(255,255,255,0.15);
+    border: 2px solid rgba(255,255,255,0.4);
+    border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 20px;
+    flex-shrink: 0;
+  }
+
+  .header h1 {
+    font-family: 'Orbitron', monospace;
+    font-size: 1.7rem;
+    font-weight: 900;
+    color: #fff;
+    letter-spacing: 2px;
+    line-height: 1;
+  }
+  .header .sub {
+    font-size: 0.62rem;
+    color: rgba(255,255,255,0.75);
+    margin-top: 3px;
+    letter-spacing: 0.5px;
+  }
+
+  .badges {
+    display: flex; gap: 5px; flex-wrap: wrap; justify-content: flex-end;
+    max-width: 420px;
+  }
+  .badge {
+    font-size: 0.55rem;
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+  }
+  .b1 { background: rgba(255,255,255,0.2); color: #fff; border: 1px solid rgba(255,255,255,0.35); }
+  .b2 { background: rgba(255,150,80,0.3); color: #ffd4b0; border: 1px solid rgba(255,150,80,0.5); }
+  .b3 { background: rgba(100,255,100,0.2); color: #b0ffb0; border: 1px solid rgba(100,255,100,0.4); }
+
+  .meta {
+    font-size: 0.58rem;
+    color: rgba(255,255,255,0.65);
+    margin-top: 5px;
+    letter-spacing: 0.3px;
+  }
+
+  /* MAIN GRID */
+  .main {
+    flex: 1;
+    display: grid;
+    grid-template-columns: 230px 1fr 1fr;
+    grid-template-rows: 1fr 1fr;
+    gap: 8px;
+    padding: 8px;
+    overflow: hidden;
+  }
+
+  .card {
+    background: var(--panel);
+    border: 1.5px solid var(--border);
+    border-radius: 6px;
+    padding: 10px 12px;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 2px 8px rgba(0,60,120,0.07);
+  }
+
+  .card.span-row { grid-row: span 2; }
+  .card.span-col { grid-column: span 2; }
+
+  .card-title {
+    font-size: 0.58rem;
+    font-weight: 700;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    margin-bottom: 7px;
+    padding-bottom: 5px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-shrink: 0;
+  }
+  .ct-blue { color: var(--accent); border-bottom: 1.5px solid #c5d8ec; }
+  .ct-orange { color: var(--accent2); border-bottom: 1.5px solid #f5d0b8; }
+  .ct-green { color: var(--accent3); border-bottom: 1.5px solid #c0e8c0; }
+
+  .card p, .card li {
+    font-size: 0.63rem;
+    line-height: 1.55;
+    color: var(--text);
+  }
+  .card ul { list-style: none; padding: 0; }
+  .card li { padding: 1.5px 0 1.5px 12px; position: relative; }
+  .card li::before { content: '▸'; position: absolute; left: 0; font-size: 0.55rem; }
+  .li-blue::before { color: var(--accent); }
+  .li-orange::before { color: var(--accent2); }
+  .li-green::before { color: var(--accent3); }
+
+  strong.hl { color: var(--accent); font-weight: 700; }
+  strong.hl2 { color: var(--accent2); font-weight: 700; }
+  strong.hl3 { color: var(--accent3); font-weight: 700; }
+
+  /* Stats */
+  .stats-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 5px;
+    margin-top: 4px;
+  }
+  .stat {
+    background: var(--light);
+    border: 1px solid var(--border);
+    border-radius: 5px;
+    text-align: center;
+    padding: 6px 4px;
+  }
+  .stat .val {
+    font-family: 'Orbitron', monospace;
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--accent);
+    display: block;
+    line-height: 1;
+  }
+  .stat .lbl {
+    font-size: 0.52rem;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    display: block;
+    margin-top: 2px;
+  }
+  .stat.s2 .val { color: var(--accent2); }
+  .stat.s3 .val { color: var(--accent3); }
+
+  /* Architecture */
+  .arch {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 4px;
+    margin-bottom: 5px;
+  }
+  .abox {
+    flex: 1;
+    background: var(--light);
+    border: 1.5px solid var(--border);
+    border-radius: 4px;
+    padding: 5px 6px;
+    text-align: center;
+    font-size: 0.58rem;
+    color: var(--text);
+    line-height: 1.4;
+  }
+  .abox .icon { font-size: 0.9rem; display: block; }
+  .abox strong { color: var(--accent); font-size: 0.6rem; }
+  .abox.warn { background: var(--light2); border-color: #f5d0b8; }
+  .abox.warn strong { color: var(--accent2); }
+  .abox.ok { background: var(--light3); border-color: #c0e8c0; }
+  .abox.ok strong { color: var(--accent3); }
+  .arr { color: var(--muted); font-size: 0.9rem; flex-shrink: 0; }
+
+  /* Table */
+  table { width: 100%; border-collapse: collapse; font-size: 0.58rem; }
+  th {
+    background: var(--light);
+    color: var(--accent);
+    padding: 4px 7px;
+    text-align: left;
+    border-bottom: 2px solid var(--border);
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    font-size: 0.57rem;
+  }
+  td {
+    padding: 3.5px 7px;
+    border-bottom: 1px solid #e8f0f8;
+    color: var(--muted);
+    font-size: 0.57rem;
+    vertical-align: middle;
+  }
+  tr:last-child td { border-bottom: none; }
+  td.good { color: var(--accent); font-weight: 600; }
+  td.warn { color: var(--accent2); font-weight: 600; }
+  td.best { color: var(--accent3); font-weight: 700; }
+  tr:nth-child(even) { background: #f8fbff; }
+
+  /* Contribution pills */
+  .contrib {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    margin-top: 2px;
+  }
+  .cpill {
+    background: linear-gradient(90deg, #e8f4ff, #f4f9ff);
+    border-left: 3px solid var(--accent);
+    padding: 4px 8px;
+    border-radius: 0 4px 4px 0;
+    font-size: 0.6rem;
+    color: var(--text);
+    line-height: 1.4;
+  }
+  .cpill.o { background: linear-gradient(90deg, #fff3ee, #fff8f4); border-left-color: var(--accent2); }
+  .cpill.g { background: linear-gradient(90deg, #edfaed, #f4fdf4); border-left-color: var(--accent3); }
+  .cpill .num { font-weight: 700; color: var(--accent); margin-right: 4px; }
+  .cpill.o .num { color: var(--accent2); }
+  .cpill.g .num { color: var(--accent3); }
+
+  /* Footer */
+  .footer {
+    background: #003d7a;
+    padding: 5px 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-shrink: 0;
+  }
+  .footer-text { font-size: 0.57rem; color: rgba(255,255,255,0.7); letter-spacing: 0.3px; }
+  .footer-link {
+    font-size: 0.6rem;
+    color: #7dd3fc;
+    background: rgba(255,255,255,0.1);
+    border: 1px solid rgba(255,255,255,0.2);
+    padding: 3px 12px;
+    border-radius: 3px;
+    text-decoration: none;
+    font-weight: 600;
+  }
+</style>
+</head>
+<body>
+<div class="poster">
+
+  <!-- HEADER -->
+  <div class="header">
+    <div class="header-left">
+      <div class="lock-icon">🔐</div>
+      <div>
+        <h1>GuardLocker</h1>
+        <div class="sub">AI-Powered Honey Password Vault · Real-Time Breach Alerting · Honey Accounts</div>
+        <div class="meta">Lakshya Beria · NIELIT &nbsp;|&nbsp; AES-256-GCM · Flask · Python 3.11+</div>
+      </div>
+    </div>
+    <div style="text-align:right;">
+      <div class="badges">
+        <span class="badge b1">AES-256-GCM</span>
+        <span class="badge b1">Honey Encryption</span>
+        <span class="badge b2">Telegram Alerts</span>
+        <span class="badge b2">Honey Accounts</span>
+        <span class="badge b3">Zero Infrastructure</span>
+        <span class="badge b3">Open Source</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- MAIN GRID -->
+  <div class="main">
+
+    <!-- LEFT COLUMN: Abstract + Stats -->
+    <div class="card span-row">
+      <div class="card-title ct-blue">📋 Overview</div>
+      <p>Existing honey vault systems need <strong class="hl2">GPU servers, 63M+ training vaults</strong>, and deep crypto expertise — inaccessible for individuals.</p>
+      <br>
+      <p><strong class="hl">GuardLocker</strong> is a locally deployable honey password vault using <strong class="hl">AES-256-GCM</strong>, deterministic decoy vault generation, <strong class="hl">honey account monitoring</strong>, and <strong class="hl2">real-time Telegram alerts</strong>.</p>
+      <br>
+      <p>Any user can install it in <strong class="hl3">under 5 minutes</strong> with 3 pip packages on any laptop — no GPU, no cloud, no expertise required.</p>
+
+      <div class="stats-grid" style="margin-top:10px;">
+        <div class="stat"><span class="val">3</span><span class="lbl">pip packages</span></div>
+        <div class="stat s2"><span class="val">0</span><span class="lbl">GPU needed</span></div>
+        <div class="stat s3"><span class="val">10-20</span><span class="lbl">honey accts</span></div>
+        <div class="stat"><span class="val">256</span><span class="lbl">AES bit key</span></div>
+        <div class="stat s2"><span class="val">&lt;5m</span><span class="lbl">setup time</span></div>
+        <div class="stat s3"><span class="val">∞</span><span class="lbl">decoy vaults</span></div>
+      </div>
+
+      <div style="margin-top:10px;">
+        <div class="card-title ct-blue" style="margin-bottom:5px;">🏷 Keywords</div>
+        <p style="color:var(--muted); font-size:0.57rem; line-height:1.8;">
+          honey-encryption · AES-256-GCM · Telegram-alerting · honey-accounts · decoy-vault · local-first-security · password-manager · open-source
+        </p>
+      </div>
+    </div>
+
+    <!-- TOP MIDDLE: How It Works + Architecture -->
+    <div class="card">
+      <div class="card-title ct-blue">⚙️ How It Works</div>
+      <div class="arch">
+        <div class="abox"><span class="icon">🌐</span><strong>Web UI</strong><br>Flask localhost</div>
+        <div class="arr">→</div>
+        <div class="abox"><span class="icon">🔑</span><strong>Master Pwd</strong><br>AES-256-GCM</div>
+        <div class="arr">→</div>
+        <div class="abox ok"><span class="icon">✅</span><strong>Correct Key</strong><br>Real Vault</div>
+      </div>
+      <div class="arch">
+        <div class="abox warn"><span class="icon">❌</span><strong>Wrong Key</strong><br>Decoy Vault</div>
+        <div class="arr">+</div>
+        <div class="abox warn"><span class="icon">📲</span><strong>Telegram</strong><br>Alert Fired</div>
+        <div class="arr">+</div>
+        <div class="abox ok"><span class="icon">🍯</span><strong>Honey Acct</strong><br>Monitor</div>
+      </div>
+      <ul style="margin-top:5px;">
+        <li class="li-blue">Every wrong password generates a <strong class="hl">unique, plausible fake vault</strong></li>
+        <li class="li-blue">Attacker can't confirm correctness without going online</li>
+        <li class="li-orange">Any honey account login fires an <strong class="hl2">instant Telegram push</strong></li>
+      </ul>
+    </div>
+
+    <!-- TOP RIGHT: Key Contributions -->
+    <div class="card">
+      <div class="card-title ct-green">🏆 Key Contributions</div>
+      <div class="contrib">
+        <div class="cpill g"><span class="num">①</span> First <em>complete</em> honey account monitoring with real-time Telegram push alerts</div>
+        <div class="cpill"><span class="num">②</span> Zero-infrastructure deployment — no GPU, no cloud, no training data</div>
+        <div class="cpill"><span class="num">③</span> Deterministic unique decoy vault per wrong master password</div>
+        <div class="cpill o"><span class="num">④</span> Full web UI accessible to non-technical users (localhost:5000)</div>
+        <div class="cpill o"><span class="num">⑤</span> Bulk password generation utility for vault seeding &amp; security testing</div>
+        <div class="cpill g"><span class="num">⑥</span> Fully open source on GitHub — deployable in &lt;5 minutes</div>
+      </div>
+    </div>
+
+    <!-- BOTTOM MIDDLE+RIGHT: Comparison Table -->
+    <div class="card span-col">
+      <div class="card-title ct-blue">📊 Comparison vs. State-of-the-Art</div>
+      <table>
+        <thead>
+          <tr>
+            <th>Feature</th>
+            <th>Cheng et al. (USENIX'25)</th>
+            <th>Golla et al. (CCS'16)</th>
+            <th>GuardLocker (This Work)</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Core Mechanism</td>
+            <td class="good">Transformer (85M params)</td>
+            <td class="warn">Markov Model</td>
+            <td class="best">AES-256-GCM + Decoy Gen</td>
+          </tr>
+          <tr>
+            <td>Attacker Accuracy</td>
+            <td class="good">64.35% (best academic)</td>
+            <td class="warn">95.79% (weak)</td>
+            <td class="best">Human-indistinguishable decoys</td>
+          </tr>
+          <tr>
+            <td>Honey Accounts</td>
+            <td class="warn">Proposed, NOT implemented</td>
+            <td class="warn">Not present</td>
+            <td class="best">✔ 10–20 live accounts + alerts</td>
+          </tr>
+          <tr>
+            <td>Real-Time Alerting</td>
+            <td class="warn">Not provided</td>
+            <td class="warn">Not provided</td>
+            <td class="best">✔ Telegram Bot API</td>
+          </tr>
+          <tr>
+            <td>Training Data / Infrastructure</td>
+            <td class="warn">63.7M vaults · NVIDIA 3090 GPU</td>
+            <td class="warn">276 vaults · Server pipeline</td>
+            <td class="best">None — 3 pip packages, any laptop</td>
+          </tr>
+          <tr>
+            <td>User Interface</td>
+            <td class="warn">API / programmatic only</td>
+            <td class="warn">Research prototype only</td>
+            <td class="best">✔ Full Web UI (Flask)</td>
+          </tr>
+          <tr>
+            <td>Open Source</td>
+            <td class="warn">Zenodo (restricted dataset)</td>
+            <td class="warn">Paper only</td>
+            <td class="best">✔ Fully open source (GitHub)</td>
+          </tr>
+        </tbody>
+      </table>
+      <p style="margin-top:6px; font-size:0.56rem; color:var(--muted);"><strong style="color:var(--accent);">Security Model Note:</strong> Cheng et al. targets server-side ciphertext theft (cloud breach). GuardLocker targets interactive physical/credential-theft attacks — adding detection &amp; response that purely cryptographic systems cannot provide. These are <em>complementary</em> contributions.</p>
+    </div>
+
+  </div>
+
+  <!-- FOOTER -->
+  <div class="footer">
+    <div>
+      <div class="footer-text">Lakshya Beria · NIELIT · 2025</div>
+      <div class="footer-text" style="margin-top:1px;">Refs: Cheng et al. USENIX'25 · Golla et al. CCS'16 · Juels &amp; Ristenpart EUROCRYPT'14 · Chatterjee et al. IEEE S&amp;P'15</div>
+    </div>
+    <a class="footer-link" href="#">⬡ github.com/lakshyaberia1/-GuardLocker</a>
+  </div>
+
+</div>
+</body>
+</html>

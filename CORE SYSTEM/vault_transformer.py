@@ -21,13 +21,17 @@ class PositionalEncoding(nn.Module):
         position = torch.arange(max_len).unsqueeze(1)
         div_term = torch.exp(torch.arange(0, d_model, 2) * (-math.log(10000.0) / d_model))
         
-        pe = torch.zeros(max_len, 1, d_model)
-        pe[:, 0, 0::2] = torch.sin(position * div_term)
-        pe[:, 0, 1::2] = torch.cos(position * div_term)
+        # FIX BUG 4: Shape [1, max_len, d_model] for batch_first=True.
+        # Original [max_len, 1, d_model] caused pe[:x.size(0)] to slice on
+        # batch dimension instead of seq dimension — wrong positions for every token.
+        pe = torch.zeros(1, max_len, d_model)
+        pe[0, :, 0::2] = torch.sin(position * div_term)
+        pe[0, :, 1::2] = torch.cos(position * div_term)
         self.register_buffer('pe', pe)
     
     def forward(self, x):
-        return x + self.pe[:x.size(0)]
+        # x: [batch, seq_len, d_model]  (batch_first=True)
+        return x + self.pe[:, :x.size(1), :]
 
 
 class VaultTransformer(nn.Module):
@@ -63,16 +67,21 @@ class VaultTransformer(nn.Module):
         # Positional encoding
         self.pos_encoder = PositionalEncoding(d_model, max_seq_length)
         
-        # Transformer decoder layers
-        decoder_layer = nn.TransformerDecoderLayer(
+        # FIX BUG 3: Use TransformerEncoder for decoder-only (causal) LM.
+        # Original used TransformerDecoder(src, src, tgt_mask=...) which is
+        # architecturally wrong — TransformerDecoder expects a separate encoder
+        # memory stream and performs cross-attention on it. A decoder-only model
+        # (like GPT) is correctly implemented as a TransformerEncoder with a
+        # causal (upper-triangular) mask, not a TransformerDecoder.
+        encoder_layer = nn.TransformerEncoderLayer(
             d_model=d_model,
             nhead=nhead,
             dim_feedforward=dim_feedforward,
             dropout=dropout,
             batch_first=True
         )
-        self.transformer_decoder = nn.TransformerDecoder(
-            decoder_layer,
+        self.transformer_decoder = nn.TransformerEncoder(
+            encoder_layer,
             num_layers=num_layers
         )
         
@@ -119,9 +128,9 @@ class VaultTransformer(nn.Module):
         if src_mask is None:
             src_mask = self.generate_square_subsequent_mask(src.size(1)).to(src.device)
         
-        # Pass through transformer
-        # For decoder-only, we use the same input as both src and tgt
-        output = self.transformer_decoder(src, src, tgt_mask=src_mask)
+        # FIX BUG 3 (cont): TransformerEncoder takes (src, mask) — one stream.
+        # No cross-attention memory needed for decoder-only / causal LM.
+        output = self.transformer_decoder(src, mask=src_mask)
         
         # Project to vocabulary
         logits = self.fc_out(output)
@@ -310,8 +319,29 @@ class VaultTokenizer:
         return self.idx_to_char.get(idx, '<UNK>')
     
     def encode(self, text: str) -> List[int]:
-        """Encode text to token IDs"""
-        return [self.char_to_id(char) for char in text]
+        """Encode text to token IDs.
+        
+        FIX BUG 8: Original iterated char-by-char, breaking multi-character
+        special tokens like '<SEP>' into ['<', 'S', 'E', 'P', '>'] which all
+        map to <UNK>. This means the model never saw the real SEP token during
+        context encoding, destroying the vault boundary signal entirely.
+        Now properly tokenizes special tokens before splitting individual chars.
+        """
+        tokens = []
+        i = 0
+        while i < len(text):
+            # Check for special tokens first (longest match)
+            matched = False
+            for special in sorted(self.special_tokens, key=len, reverse=True):
+                if text[i:i+len(special)] == special:
+                    tokens.append(self.char_to_idx[special])
+                    i += len(special)
+                    matched = True
+                    break
+            if not matched:
+                tokens.append(self.char_to_id(text[i]))
+                i += 1
+        return tokens
     
     def decode(self, token_ids: List[int]) -> str:
         """Decode token IDs to text"""

@@ -121,11 +121,17 @@ class HoneyAccountMonitor:
         """Stop all monitoring tasks"""
         self.running = False
         logger.info("Stopping honey account monitoring")
-        
+
         for task in self.monitoring_tasks:
             task.cancel()
-        
-        await asyncio.gather(*self.monitoring_tasks, return_exceptions=True)
+
+        # FIX M3: return_exceptions=True prevents CancelledError from propagating
+        # to the caller when tasks are cancelled cleanly. Without this the caller
+        # gets an unhandled CancelledError even during normal shutdown.
+        try:
+            await asyncio.gather(*self.monitoring_tasks, return_exceptions=True)
+        except asyncio.CancelledError:
+            pass  # Expected during clean shutdown
         self.monitoring_tasks = []
     
     async def _monitor_account(
@@ -167,9 +173,14 @@ class HoneyAccountMonitor:
                         # Update last alert time
                         self.last_alerts[account_id] = datetime.now()
                         
-                        # Call callback if provided
+                        # FIX M2: Support both sync and async callbacks.
+                        # Awaiting a regular (non-coroutine) callable crashes with
+                        # TypeError. Check first and call accordingly.
                         if alert_callback:
-                            await alert_callback(alert)
+                            if asyncio.iscoroutinefunction(alert_callback):
+                                await alert_callback(alert)
+                            else:
+                                alert_callback(alert)
                 
                 # Wait before next check
                 await asyncio.sleep(self.config.check_interval_seconds)
@@ -334,8 +345,9 @@ GuardLocker Security Team
             msg['Subject'] = subject
             msg.attach(MIMEText(body, 'plain'))
             
-            # Use asyncio to run blocking SMTP in executor
-            await asyncio.get_event_loop().run_in_executor(
+            # FIX M1: get_event_loop() is deprecated in Python 3.10+;
+            # get_running_loop() correctly returns the loop for the running coroutine.
+            await asyncio.get_running_loop().run_in_executor(
                 None,
                 self._send_smtp_email,
                 msg
@@ -395,14 +407,20 @@ class HoneyAccountGenerator:
         # Add more websites
     ]
     
-    def __init__(self, vault_model):
+    def __init__(self, vault_model, tokenizer=None):
         """
         Initialize generator
-        
+
+        FIX M4: VaultTransformer does not expose a .tokenizer attribute.
+        The original code called self.vault_model.tokenizer which raises
+        AttributeError at runtime. Accept tokenizer as a separate argument.
+
         Args:
-            vault_model: Trained vault model for password generation
+            vault_model: Trained VaultTransformer model for password generation
+            tokenizer:   VaultTokenizer instance (required for password generation)
         """
         self.vault_model = vault_model
+        self.tokenizer = tokenizer
     
     def generate_honey_accounts(
         self,
@@ -434,10 +452,16 @@ class HoneyAccountGenerator:
             else:
                 username = f"honeyaccount{i+1}"
             
-            # Generate password from model
+            # FIX M4 (cont): use self.tokenizer instead of self.vault_model.tokenizer
+            if self.tokenizer is None:
+                raise RuntimeError(
+                    "HoneyAccountGenerator requires a tokenizer. "
+                    "Pass tokenizer= when constructing: "
+                    "HoneyAccountGenerator(model, tokenizer=tokenizer)"
+                )
             password = self.vault_model.generate_password(
                 '<SEP>',
-                self.vault_model.tokenizer,
+                self.tokenizer,
                 temperature=0.9
             )
             
