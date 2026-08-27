@@ -289,4 +289,4 @@ During development, the following bugs were identified and corrected. Each would
 
 ---
 
-*Made by Lakshya Beria | NIELIT*
+*Made by Lakshya Beria and Danish Khan | NIELIT*
