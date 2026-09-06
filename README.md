@@ -1,6 +1,6 @@
 # GuardLocker — Honey Password Vault
 
-**Author:** Lakshya Beria, NIELIT
+**Author:** Lakshya Beria and Danish Khan, NIELIT
 **Version:** 2.0 (Argon2id upgrade)
 **Research Base:** Juels & Ristenpart, *Honey Encryption* (EUROCRYPT 2014) · Cheng et al., *Probability Model Transforming Encoders* (USENIX Security 2019) · Cheng et al., *Practically Secure Honey Password Vaults* (USENIX Security 2025)
 
